@@ -190,7 +190,7 @@ for data,data_type in zip([data_raw_bl,data_raw_exp],['baseline','experiment']):
         fin_dat.append((curr_id,rt_DF))
     aaaa.append((data_type,fin_dat))
 
-Check ID 14 BL & 22 EXP
+#Check ID 14 BL & 22 EXP
        
     #             if i in check['block_nr'].values:
     #                 curr_block = check.loc[(check['block_nr'] == i)]
