@@ -7,7 +7,7 @@ Created on Fri Jun 26 09:58:39 2020
 
 
 import pandas as pd
-
+import pingouin as pg
 import numpy as np
 import os
 data_raw_exp = []
@@ -46,6 +46,156 @@ for file in os.listdir(r"C:\Users\de_hauk\Desktop\New folder"):
                 print('shit')
 
 
+
+
+### Get reaction time (only hits)
+def data_proc_RT(data_bl,data_exp):
+    Fin_dat_RT = []
+    for data,data_type in zip([data_raw_bl,data_raw_exp],['baseline','experiment']):
+        fin_dat_experi = []
+        fin_dat_111 = pd.DataFrame(columns = ['RT_0_mean','RT_0_std','RT_1_mean','RT_1_std'])
+        fin_dat_bl = pd.DataFrame(columns = ['RT_mean','RT_std'])
+        clms = ['ID','block_cond','trial_type','mean','std','hits','misses','incorrect']
+        fin_datfin = pd.DataFrame(columns = clms)
+        fin_dat_JASP = pd.DataFrame() 
+        for vpn in data:
+            curr_df = vpn[2].copy() 
+            curr_id = vpn[0]
+            hit = curr_df.copy()
+            check = hit.copy()
+            if data_type == 'baseline':
+                rng = 6 # 5 Blocks a 20 in baseline
+            elif data_type == 'experiment':
+                rng = 11 # 10 Blocks a 30 in baseline
+            #rt_DF = pd.DataFrame(index = ['B_' + str(i) for i in range(1,rng)])
+            #rt_mean, rt_std,block_cond = [],[],[]
+            hhhh = pd.DataFrame(columns = ['mean','std','block','block_cond'])
+            # for every block
+            for i in range(1,rng):
+                curr_block = check.loc[(check['block_nr'] == i)]
+                corr_block_proc = pd.DataFrame(columns = ['mean','std','hits','misses','incorrect'], index= ['AX','BX','AY' ,'BY'])
+                #print(curr_block)
+                block_c = np.unique(np.array(curr_block['block_cond']))[0]
+                mean_list = []
+                std_list = []
+                hits_L = []
+                missed_L = []
+                error_L = []
+                
+                # for every trialtype
+                for trial_type in range(1,5):
+                    RT_mean = curr_block['RT'].loc[(curr_block['type'] == trial_type) & (curr_block['R_type'] == ' hit')].mean()
+                    RT_std = curr_block['RT'].loc[(curr_block['type'] == trial_type) & (curr_block['R_type'] == ' hit')].std()
+                    #hit,miss,error
+                    hits = [i for i in curr_block['R_type'].loc[curr_block['type'] == trial_type] if i == ' hit']
+                    missed = [i for i in curr_block['R_type'].loc[(curr_block['type'] == trial_type)] if i == ' miss']
+                    error = [i for i in curr_block['R_type'].loc[curr_block['type'] == trial_type] if i == ' incorrect']
+                    mean_list.append(RT_mean)
+                    std_list.append(RT_std)
+                    hits_L.append(len(hits))
+                    missed_L.append(len(missed))
+                    error_L.append(len(error))
+                    
+                corr_block_proc['mean'] = mean_list
+                corr_block_proc['std'] = std_list
+                corr_block_proc['hits'] = hits_L
+                corr_block_proc['incorrect'] = error_L
+                corr_block_proc['misses'] = missed_L
+
+                corr_block_proc['block'] = [i,i,i,i]
+                corr_block_proc['block_cond'] = [block_c,block_c,block_c,block_c]
+
+                hhhh = pd.concat([hhhh,corr_block_proc])
+                
+            save_dict = pd.DataFrame(columns = clms)
+            ## for every trialtype & block cond
+            for tt in ['AX','BX','AY' ,'BY']:
+                curr_df = hhhh.loc[tt].copy()
+                curr_df_0_mean = curr_df.loc[curr_df['block_cond'] == 0]['mean'].mean()
+                curr_df_0_std = curr_df.loc[curr_df['block_cond'] == 0]['mean'].std()
+                curr_df_0_hit = curr_df.loc[curr_df['block_cond'] == 0]['hits'].sum()
+                curr_df_0_miss = curr_df.loc[curr_df['block_cond'] == 0]['misses'].sum()
+                curr_df_0_error = curr_df.loc[curr_df['block_cond'] == 0]['incorrect'].sum()
+                
+                curr_df_1_mean = curr_df.loc[curr_df['block_cond'] == 1]['mean'].mean()
+                curr_df_1_std = curr_df.loc[curr_df['block_cond'] == 1]['mean'].std()
+                curr_df_1_hit = curr_df.loc[curr_df['block_cond'] == 1]['hits'].sum()
+                curr_df_1_miss = curr_df.loc[curr_df['block_cond'] == 1]['misses'].sum()
+                curr_df_1_error = curr_df.loc[curr_df['block_cond'] == 1]['incorrect'].sum()
+                fin_res_0 = pd.Series([curr_id,0,tt,curr_df_0_mean,curr_df_0_std,curr_df_0_hit,curr_df_0_miss,curr_df_0_error], index = clms)
+                fin_res_1 = pd.Series([curr_id,1,tt,curr_df_1_mean,curr_df_1_std,curr_df_1_hit,curr_df_1_miss,curr_df_1_error], index = clms)
+                save_dict = save_dict.append(fin_res_0,ignore_index=True)
+                save_dict = save_dict.append(fin_res_1,ignore_index=True)
+            
+            save_dict_0 = save_dict.loc[save_dict['block_cond'] == 0].copy()
+            save_dict_1 = save_dict.loc[save_dict['block_cond'] == 1].copy()
+            save_dict_X = pd.DataFrame()
+            save_dict_X['trialtype'],save_dict_X['id'] = save_dict_0['trial_type'],save_dict_0['ID']
+            save_dict_X['mean_0'],save_dict_X['mean_1'] = save_dict_0['mean'],[i for i in save_dict_1['mean']]
+            save_dict_X['hits_0'],save_dict_X['hits_1'] =save_dict_0['hits'],[i for i in save_dict_1['hits']]
+            save_dict_X['miss_0'],save_dict_X['miss_1'] =save_dict_0['misses'],[i for i in save_dict_1['misses']]
+            save_dict_X['error_0'],save_dict_X['error_1'] =save_dict_0['incorrect'],[i for i in save_dict_1['incorrect']]
+            #save_dict_cond = pd.concat([save_dict_0,save_dict_1])
+            fin_dat_experi.append((curr_id,hhhh,save_dict,save_dict_X))
+            fin_datfin = fin_datfin.append(save_dict)
+            fin_dat_JASP = fin_dat_JASP.append(save_dict_X)
+        Fin_dat_RT.append((data_type,fin_dat_experi,fin_datfin,fin_dat_JASP))
+           
+
+    return Fin_dat_RT
+        
+
+
+DATA_rt = data_proc_RT(data_raw_bl,data_raw_exp)
+data_raw = DATA_rt[1][2]
+data_raw['ID'] = data_raw['ID'].copy().astype('int32')
+data_raw['block_cond'] = data_raw['block_cond'].copy().astype('int32')
+data_raw['trial_type'] = data_raw['trial_type'].copy().replace({'AX':1,
+                                                                'BX':2,
+                                                                'AY':3,
+                                                                'BY':4})
+data = data_raw.sort_values('ID')
+groups_raw = pd.read_csv(r'C:\Users\de_hauk\Desktop\VP_Zuordnung.txt',sep ='\t').sort_values('id')
+groups = groups_raw.loc[groups_raw['id'] != 22]
+ids_list = []
+conds_list = []
+for ids,group in zip(groups['id'],groups['group']):
+    aaa = [ids] *8
+    ids_list = ids_list +aaa 
+    bbb = [group] *8 
+    conds_list = conds_list + bbb
+data['ids'],data['BS_group'] = ids_list,conds_list
+check_u = data['ids'] == data['ID']
+
+
+
+data.to_csv(r'C:\Users\de_hauk\Desktop\data.csv', sep=',' )
+
+###Data for JASP
+
+group_BS = groups.copy()
+data_JASP = DATA_rt[1][3]
+data_JASP['id'] = data_JASP['id'].copy().astype('int32')
+data_JASP = data_JASP.sort_values('id').copy()
+
+check_ids = group_BS['id'] == np.unique(data_JASP['id'])
+group_JASP = []
+for i,j in zip(group_BS['id'],group_BS['group']):
+    group_JASP = group_JASP + [j]*4
+    
+data_JASP['bs_group'] = group_JASP
+    
+data_JASP.to_csv(r'C:\Users\de_hauk\Desktop\data_JASP.csv', sep=',' )
+
+data_PG = DATA_rt[1][2]
+res = pg.mixed_anova(data=data_PG, dv='mean', subject ='ID', between=['trial_type','BS_group'], within ='block_cond', effsize='np2')
+
+
+#res_m_ttest = pg.pairwise_ttests(data, dv='mean', between=['block_cond','trial_type'])
+############################################# OLDv ################################
+'''
+DATA_incorrect_answers = data_proc_incorr(data_raw_bl,data_raw_exp)
+DATA_missed_answers = data_proc_missed(data_raw_bl,data_raw_exp)
 # ### Get missed answers
 def data_proc_missed(data_bl,data_exp):
     tot_dat = []
@@ -124,116 +274,7 @@ def data_proc_incorr(data_bl,data_exp):
 
 
 
-
-### Get reaction time (only hits)
-def data_proc_RT(data_bl,data_exp):
-    Fin_dat_RT = []
-    for data,data_type in zip([data_raw_bl,data_raw_exp],['baseline','experiment']):
-        fin_dat_experi = []
-        fin_dat_111 = pd.DataFrame(columns = ['RT_0_mean','RT_0_std','RT_1_mean','RT_1_std'])
-        fin_dat_bl = pd.DataFrame(columns = ['RT_mean','RT_std'])
-        for vpn in data:
-            curr_df = vpn[2].copy() 
-            curr_id = vpn[0]
-            hit = curr_df.loc[(curr_df['R_type'] == ' hit')]
-
-            check = hit.copy()
-            if data_type == 'baseline':
-                rng = 6 # 5 Blocks a 20 in baseline
-            elif data_type == 'experiment':
-                rng = 11 # 10 Blocks a 30 in baseline
-            rt_DF = pd.DataFrame(index = ['B_' + str(i) for i in range(1,rng)])
-            rt_mean, rt_std,block_cond = [],[],[]
-            hhhh = pd.DataFrame(columns = ['mean','std','block','block_cond'])
-            # for every block
-            for i in range(1,rng):
-                curr_block = check.loc[(check['block_nr'] == i)]
-                corr_block_proc = pd.DataFrame(columns = ['mean','std','hits','misses','incorrect'], index= ['trial_t_1','trial_t_2','trial_t_3' ,'trial_t_4' ])
-                #print(curr_block)
-                block_c = np.unique(np.array(curr_block['block_cond']))[0]
-                mean_list = []
-                std_list = []
-                hits_L = []
-                missed_L = []
-                error_L = []
-                
-                # for every trialtype
-                for trial_type in range(1,5):
-                    RT_mean = curr_block['RT'].loc[(curr_block['type'] == trial_type) & (curr_block['R_type'] == ' hit')].mean()
-                    RT_std = curr_block['RT'].loc[(curr_block['type'] == trial_type) & (curr_block['R_type'] == ' hit')].std()
-                    #hit,miss,error
-                    hits = [i for i in curr_block['R_type'].loc[curr_block['type'] == trial_type] if i == ' hit']
-                    doesnt work
-                    missed = [i for i in curr_block['R_type'].loc[curr_block['type'] == trial_type] if i == ' miss']
-                    error = [i for i in curr_block['R_type'].loc[curr_block['type'] == trial_type] if i == ' incorrect']
-                    mean_list.append(RT_mean)
-                    std_list.append(RT_std)
-                    hits_L.append(len(hits))
-                    missed_L.append(len(missed))
-                    error_L.append(len(error))
-                #print(missed_L)   
-                # RT_mean_1, RT_std_1 = curr_block['RT'].loc[curr_block['type'] == 1].mean(), curr_block['RT'].loc[curr_block['type'] == 1].std()
-                # RT_mean_2, RT_std_2 = curr_block['RT'].loc[curr_block['type'] == 2].mean(), curr_block['RT'].loc[curr_block['type'] == 2].std()
-                # RT_mean_3, RT_std_3 = curr_block['RT'].loc[curr_block['type'] == 3].mean(), curr_block['RT'].loc[curr_block['type'] == 3].std()
-                # RT_mean_4, RT_std_4 = curr_block['RT'].loc[curr_block['type'] == 4].mean(), curr_block['RT'].loc[curr_block['type'] == 4].std()
-                # sum_hits,sum_error, sum_miss = 
-                # rt_mean.append([RT_mean_1,RT_mean_2,RT_mean_3,RT_mean_4])
-                # rt_std.append([RT_std_1, RT_std_2, RT_std_3, RT_std_4])
-                corr_block_proc['mean'] = mean_list
-                corr_block_proc['std'] = std_list
-                corr_block_proc['hits'] = hits_L
-                corr_block_proc['incorrect'] = error_L
-                corr_block_proc['misses'] = missed_L
-                # corr_block_proc['mean'] = [RT_mean_1,RT_mean_2,RT_mean_3,RT_mean_4]
-                # corr_block_proc['std'] = [RT_std_1, RT_std_2, RT_std_3, RT_std_4]
-                corr_block_proc['block'] = [i,i,i,i]
-                corr_block_proc['block_cond'] = [block_c,block_c,block_c,block_c]
-                #print(i,corr_block_proc)
-                hhhh = pd.concat([hhhh,corr_block_proc])
-                # if pd.Series([RT_mean_1,RT_mean_2,RT_mean_3,RT_mean_4]).isnull().values.any() == True:
-                #     print(curr_block)
-                # rt_mean.append(RT_mean)
-                # rt_std.append(RT_std)
-                #block_cond.append(block_c)
-            fin_dat_experi.append((curr_id,hhhh))
-        Fin_dat_RT.append((data_type,fin_dat_experi))
-           
-            # rt_DF['rt_mean'],rt_DF['rt_std'] = rt_mean,rt_std
-            # rt_DF['block_cond'] = block_cond
-    return Fin_dat_RT
-        #     # Compute Mean of Means,Std,MEdian
-        #     block_dat = pd.DataFrame(index = [curr_id])
-            
-        #     if data_type == 'baseline': # ignore block condition in BL
-        #         RT_mean_BL = rt_DF['rt_mean'].mean()
-        #         RT_std_BL = rt_DF['rt_mean'].std()
-        #         block_dat['RT_mean'], block_dat['RT_std'] = RT_mean_BL,RT_std_BL
-        #         fin_dat_bl = pd.concat([fin_dat_bl,block_dat],axis = 0)
-                
-        #     elif data_type == 'experiment':
-        #         block_c_0_mean = rt_DF.loc[rt_DF['block_cond'] == 0]['rt_mean'].mean()
-        #         block_c_0_std = rt_DF.loc[rt_DF['block_cond'] == 0]['rt_mean'].std()
-        #         block_c_1_mean = rt_DF.loc[rt_DF['block_cond'] == 1]['rt_mean'].mean()
-        #         block_c_1_std = rt_DF.loc[rt_DF['block_cond'] == 1]['rt_mean'].std()
-        #         block_c_0 = [block_c_0_mean, block_c_0_std]
-        #         block_c_1 = [block_c_1_mean,block_c_1_std]
-        #         block_dat['RT_0_mean'],block_dat['RT_0_std'] = block_c_0[0],block_c_0[1]
-        #         block_dat['RT_1_mean'],block_dat['RT_1_std'] = block_c_1[0],block_c_1[1]
-        #         fin_dat_111 = pd.concat([fin_dat_111,block_dat],axis = 0)
-    
-        # if data_type == 'baseline':
-            
-        #     Fin_dat_RT.append((data_type,fin_dat_bl))
-        # elif data_type == 'experiment':
-        #     Fin_dat_RT.append((data_type,fin_dat_111))
-    #return rt_DF
-        
-
-DATA_incorrect_answers = data_proc_incorr(data_raw_bl,data_raw_exp)
-DATA_missed_answers = data_proc_missed(data_raw_bl,data_raw_exp)
-DATA_rt = data_proc_RT(data_raw_bl,data_raw_exp)
-
-lfnjalkn = len([i for i in data_raw_exp[0][2]['R_type'] if i == ' incorrect'])      
+     
     #             if i in check['block_nr'].values:
     #                 curr_block = check.loc[(check['block_nr'] == i)]
     #                 unq_val, unq_count = np.unique(curr_block['type'],return_counts = True)
@@ -280,6 +321,6 @@ lfnjalkn = len([i for i in data_raw_exp[0][2]['R_type'] if i == ' incorrect'])
     # hhhh.append((data_type,fin_dat))
 
 
-
+'''
 
 
