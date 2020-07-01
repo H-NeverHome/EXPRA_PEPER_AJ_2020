@@ -10,6 +10,9 @@ import pandas as pd
 import pingouin as pg
 import numpy as np
 import os
+
+
+########## Import Data
 data_raw_exp = []
 data_raw_bl = []
 column_names = ['del1','group','del2','block','del3', 'trial_nr','del4', 'type', 'del5','RT','del6','R_type']
@@ -48,7 +51,7 @@ for file in os.listdir(r"C:\Users\de_hauk\Desktop\New folder"):
             # check if data exactly 400 trials long
             if len(sample['block_nr']) > 100+300:
                 print('shit')
-#### get additional info
+########## get additional info
 
 groups = {1:'naive, neutral',
           2:'instruiert, neutral',
@@ -61,12 +64,12 @@ trial_types_dict = {1:'AX',
               3:'AY',
               4:'BY'}
 
-### get group data
+########## get group data
 
 groups_raw = pd.read_csv(r'C:\Users\de_hauk\Desktop\VP_Zuordnung.txt',sep ='\t').sort_values('id').drop('ID', axis =1)
 groups = groups_raw.loc[groups_raw['id'].isin(unique_IDs)].copy()
 
-###
+########## Get proc data
 PERF_bl= []
 PERF_bl_DF = pd.DataFrame(columns= ['id','RT_M_bl','RT_STD_bl', 'hits_bl','misses_bl','incorrect_bl'] )
 PERF_exp_DF_1 =  pd.DataFrame()
@@ -152,180 +155,42 @@ for vpn_dat in data_raw_total:
             PERF_exp_DF_1 = PERF_exp_DF_1.copy().append(exp_tt_res)
 
 
-###Merge all DF 
+###Merge all DF to wide format 
 total_dat = pd.DataFrame()
 AAA_dat = pd.concat([PERF_bl_DF.sort_values('id'),
-                     PERF_exp_DF_0.sort_values('id').drop(['id','trial_type'], axis =1),
-                     PERF_exp_DF_1.sort_values('id').drop(['id','trial_type'], axis =1)]
+                     PERF_exp_DF_0.sort_values('id').drop(['id','trial_type'], axis = 1),
+                     PERF_exp_DF_1.sort_values('id').drop(['id','trial_type'], axis = 1)]
                     ,axis=1)
+
+###Merge all DF to long format 
+BBB_dat = pd.concat([PERF_bl_DF.sort_values('id'),
+                     PERF_exp_DF_0.sort_values('id'),
+                     PERF_exp_DF_1.sort_values('id')]
+                    ,axis=0)
+
+
 
 group_aaa = []
 for i in AAA_dat['id'].unique():
     group_aaa = group_aaa +list(groups['group'].loc[groups['id'] == i])*4
 AAA_dat['group'] = group_aaa
 AAA_dat.to_csv(r'C:\Users\de_hauk\Desktop\data_JASP_2.csv', sep=',' )
-# total_dat = total_dat.copy().append(PERF_bl_DF)
-# total_dat = total_dat.copy().append(PERF_exp_DF_1)
-# total_dat = total_dat.copy().append(PERF_exp_DF_0)
-# ### Get reaction time, errors & misses
-# data_bl = data_raw_bl
-# data_exp = data_raw_exp
 
-# DATA_total = []
-# for data,data_type in zip([data_raw_bl,data_raw_exp],['baseline','experiment']):
-#     fin_dat_experi = []
-#     clms = ['ID','block_cond','trial_type','mean','std','hits','misses','incorrect']
-#     fin_datfin = pd.DataFrame(columns = clms)
-#     fin_dat_JASP = pd.DataFrame() 
-#     for vpn in data:
-#         curr_df = vpn[2].copy() 
-#         curr_id = int(vpn[0])
-#         hit = curr_df.copy()
-#         check = hit.copy()
-        
-#         #check if experimental or baseline data
-#         if data_type == 'baseline':
-#             rng = 6 # 5 Blocks a 20 in baseline
-#         elif data_type == 'experiment':
-#             rng = 11 # 10 Blocks a 30 in baseline
+aaaBBB = pd.melt(AAA_dat, id_vars=['group','id','trial_type'], value_vars=['RT_M_bl','RT_M_exp_0','RT_M_exp_1'])
+blck_cond = []
+for i in aaaBBB['variable']:
+    if i == 'RT_M_bl':
+        blck_cond.append(0)
+    elif i == 'RT_M_exp_0':
+        blck_cond.append(1)
+    elif i == 'RT_M_exp_1':
+        blck_cond.append(2)
+aaaBBB['block_cond'] = blck_cond
+BS_cond = []
+for i,j in zip(aaaBBB['trial_type'],aaaBBB['block_cond']):
+    BS_cond.append(str(i)+str(j))
+aaaBBB['total_cond'] = BS_cond      
 
-#         data_id = pd.DataFrame(columns = ['mean','std','block','block_cond'])
-#         # for every block
-#         for i in range(1,rng):
-#             curr_block = check.loc[(check['block_nr'] == i)]
-#             corr_block_proc = pd.DataFrame(columns = ['mean','std','hits','misses','incorrect'], index= ['AX','BX','AY' ,'BY'])
-#             #print(curr_block)
-#             block_c = np.unique(np.array(curr_block['block_cond']))[0]
-#             mean_L = []
-#             std_L = []
-#             hits_L = []
-#             missed_L = []
-#             error_L = []
-#             id_L = []
-#             # for every trialtype
-#             for trial_type in range(1,5):
-#                 # get RT
-#                 RT_mean = curr_block['RT'].loc[(curr_block['type'] == trial_type) & (curr_block['R_type'] == ' hit')].mean()
-#                 RT_std = curr_block['RT'].loc[(curr_block['type'] == trial_type) & (curr_block['R_type'] == ' hit')].std()
-#                 #hit,miss,error
-#                 hits = [i for i in curr_block['R_type'].loc[curr_block['type'] == trial_type] if i == ' hit']
-#                 missed = [i for i in curr_block['R_type'].loc[(curr_block['type'] == trial_type)] if i == ' miss']
-#                 error = [i for i in curr_block['R_type'].loc[curr_block['type'] == trial_type] if i == ' incorrect']
-#                 mean_L.append(RT_mean)
-#                 std_L.append(RT_std)
-#                 hits_L.append(len(hits))
-#                 missed_L.append(len(missed))
-#                 error_L.append(len(error))
-#                 id_L.append(curr_id)
-                
-#             corr_block_proc['mean'] = mean_L
-#             corr_block_proc['std'] = std_L
-#             corr_block_proc['hits'] = hits_L
-#             corr_block_proc['incorrect'] = error_L
-#             corr_block_proc['misses'] = missed_L
-#             corr_block_proc['ID'] = id_L
-#             corr_block_proc['block'] = [i,i,i,i]
-#             corr_block_proc['block_cond'] = [block_c,block_c,block_c,block_c]
-
-#             data_id = pd.concat([data_id,corr_block_proc])
-            
-#         save_dict = pd.DataFrame(columns = clms)
-        
-        
-#         ## for every block cond
-#         for tt in ['AX','BX','AY' ,'BY']:
-#             # get data from curr id
-#             curr_df = data_id.loc[tt].copy()
-            
-#             # block cond 0 == no malinger
-#             curr_df_0_mean = curr_df.loc[curr_df['block_cond'] == 0]['mean'].mean()
-#             curr_df_0_std = curr_df.loc[curr_df['block_cond'] == 0]['mean'].std()
-#             curr_df_0_hit = curr_df.loc[curr_df['block_cond'] == 0]['hits'].sum()
-#             curr_df_0_miss = curr_df.loc[curr_df['block_cond'] == 0]['misses'].sum()
-#             curr_df_0_error = curr_df.loc[curr_df['block_cond'] == 0]['incorrect'].sum()
-            
-#             # block cond 1 == no malinger
-#             curr_df_1_mean = curr_df.loc[curr_df['block_cond'] == 1]['mean'].mean()
-#             curr_df_1_std = curr_df.loc[curr_df['block_cond'] == 1]['mean'].std()
-#             curr_df_1_hit = curr_df.loc[curr_df['block_cond'] == 1]['hits'].sum()
-#             curr_df_1_miss = curr_df.loc[curr_df['block_cond'] == 1]['misses'].sum()
-#             curr_df_1_error = curr_df.loc[curr_df['block_cond'] == 1]['incorrect'].sum()
-            
-#             #get data together
-#             fin_res_0 = pd.Series([curr_id,0,tt,curr_df_0_mean,curr_df_0_std,curr_df_0_hit,curr_df_0_miss,curr_df_0_error], index = clms)
-#             fin_res_1 = pd.Series([curr_id,1,tt,curr_df_1_mean,curr_df_1_std,curr_df_1_hit,curr_df_1_miss,curr_df_1_error], index = clms)
-            
-#             # append to DF
-#             save_dict = save_dict.append(fin_res_0,ignore_index=True)
-#             save_dict = save_dict.append(fin_res_1,ignore_index=True)
-        
-#         save_dict_0 = save_dict.loc[save_dict['block_cond'] == 0].copy()
-#         save_dict_1 = save_dict.loc[save_dict['block_cond'] == 1].copy()
-        
-#         #change from long format to wide for JASP
-#         save_dict_JASP = pd.DataFrame()
-#         save_dict_JASP['trialtype'],save_dict_JASP['id'] = save_dict_0['trial_type'],save_dict_0['ID'].copy().astype('int32')
-#         save_dict_JASP['mean_0'],save_dict_JASP['mean_1'] = save_dict_0['mean'],[i for i in save_dict_1['mean']]
-#         save_dict_JASP['hits_0'],save_dict_JASP['hits_1'] =save_dict_0['hits'],[i for i in save_dict_1['hits']]
-#         save_dict_JASP['miss_0'],save_dict_JASP['miss_1'] =save_dict_0['misses'],[i for i in save_dict_1['misses']]
-#         save_dict_JASP['error_0'],save_dict_JASP['error_1'] =save_dict_0['incorrect'],[i for i in save_dict_1['incorrect']]
-#         fin_dat_experi.append((curr_id,data_id,save_dict,save_dict_JASP))
-#         fin_datfin = fin_datfin.append(save_dict)
-#         fin_dat_JASP = fin_dat_JASP.append(save_dict_JASP)
-#     DATA_total.append((data_type,fin_dat_experi,fin_datfin.sort_values('ID'),fin_dat_JASP.sort_values('id')))
-       
-# ### get Baseline into DF as another WS-FActor+
-# erc = []
-# for dat_bl,dat_exp in zip(DATA_total[0][1],DATA_total[1][1]):
-#     DF_curr_id_bl = dat_bl[3]
-#     DF_curr_id_exp = dat_exp[3]
-    
-#     erc.append((dat_bl,dat_exp))
-    
-        
-
-
-# DATA_rt = DATA_total
-# data_raw = DATA_rt[1][2]
-# data_raw['ID'] = data_raw['ID'].copy().astype('int32')
-# data_raw['block_cond'] = data_raw['block_cond'].copy().astype('int32')
-# data_raw['trial_type'] = data_raw['trial_type'].copy().replace({'AX':1,
-#                                                                 'BX':2,
-#                                                                 'AY':3,
-#                                                                 'BY':4})
-# data = data_raw.sort_values('ID')
-# groups_raw = pd.read_csv(r'C:\Users\de_hauk\Desktop\VP_Zuordnung.txt',sep ='\t').sort_values('id')
-# groups = groups_raw.loc[groups_raw['id'] != 22]
-# ids_list = []
-# conds_list = []
-# for ids,group in zip(groups['id'],groups['group']):
-#     aaa = [ids] *8
-#     ids_list = ids_list +aaa 
-#     bbb = [group] *8 
-#     conds_list = conds_list + bbb
-# data['ids'],data['BS_group'] = ids_list,conds_list
-# check_u = data['ids'] == data['ID']
-
-
-
-# data.to_csv(r'C:\Users\de_hauk\Desktop\data.csv', sep=',' )
-
-# ###Data for JASP
-
-# group_BS = groups.copy()
-# data_JASP = DATA_rt[1][3]
-# data_JASP['id'] = data_JASP['id'].copy().astype('int32')
-# data_JASP = data_JASP.sort_values('id').copy()
-
-# check_ids = group_BS['id'] == np.unique(data_JASP['id'])
-# group_JASP = []
-# for i,j in zip(group_BS['id'],group_BS['group']):
-#     group_JASP = group_JASP + [j]*4
-    
-# data_JASP['bs_group'] = group_JASP
-    
-# data_JASP.to_csv(r'C:\Users\de_hauk\Desktop\data_JASP.csv', sep=',' )
-
-# data_PG = DATA_rt[1][2]
-# #res = pg.mixed_anova(data=data_PG, dv='mean', subject ='ID', between=['trial_type','BS_group'], within ='block_cond', effsize='np2')
+res = pg.mixed_anova(data=aaaBBB, dv='value', subject ='id', between='group', within ='total_cond', effsize='np2')
+res_ttest = pg.pairwise_ttests(data=aaaBBB, dv='value', subject ='id', between='group', within ='total_cond')
 
