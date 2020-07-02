@@ -55,7 +55,7 @@ mqa = (1/2) * sqa
 mqr = (1/(35*3-3)) * sqr
 f_val = mqa/mqr
 pval = 1-f.cdf(f_val,2,102)
-
+p_val = f.sf(f_val,2,102)
 ### Eta-Squared
 eta_sq_uncorr = sqa/sq_tot
 
