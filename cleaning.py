@@ -204,27 +204,37 @@ for vpn in BSI_dat_raw['id'].unique():
 BSI_dat= BSI_dat.copy().T
 BSI_dat.to_csv(r'C:\Users\de_hauk\PowerFolders\EXPRA_Peper_SS_2020\Daten\data_JASP_2_BSI.csv', sep=',' )
 
-
+aov_2F = pg.anova(dv='BSI_RT_BL', between='group', data=BSI_dat,
+               detailed=True)
 
 anova_2f_bs = AAA_dat.copy()[['id','RT_M_bl','trial_type','group']]
-#anova_2f_bs['BSI'] = 
+
 anova_2f_bs.to_csv(r'C:\Users\de_hauk\PowerFolders\EXPRA_Peper_SS_2020\Daten\2f_anova\anova_2f_bs.csv', sep=',' )
 
-aaaBBB = pd.melt(AAA_dat, id_vars=['group','id','trial_type'], value_vars=['RT_M_bl','RT_M_exp_0','RT_M_exp_1'])
-blck_cond = []
-for i in aaaBBB['variable']:
-    if i == 'RT_M_bl':
-        blck_cond.append(0)
-    elif i == 'RT_M_exp_0':
-        blck_cond.append(1)
-    elif i == 'RT_M_exp_1':
-        blck_cond.append(2)
-aaaBBB['block_cond'] = blck_cond
-BS_cond = []
-for i,j in zip(aaaBBB['trial_type'],aaaBBB['block_cond']):
-    BS_cond.append(str(i)+str(j))
-aaaBBB['total_cond'] = BS_cond      
+# import seaborn as sns
 
-res = pg.mixed_anova(data=aaaBBB, dv='value', subject ='id', between='group', within ='total_cond', effsize='np2')
-res_ttest = pg.pairwise_ttests(data=aaaBBB, dv='value', subject ='id', between='group', within ='total_cond')
+# sns_plot = sns.catplot(x="group", y="BSI_RT_BL", data=BSI_dat)
+
+# aov_2F = pg.anova(dv='data', between=['group','gender'], data=DATA_anova,
+#                detailed=True)
+
+# DATA_anova.to_csv(r'DATA_2F_anova.csv', sep= ',')
+
+# aaaBBB = pd.melt(AAA_dat, id_vars=['group','id','trial_type'], value_vars=['RT_M_bl','RT_M_exp_0','RT_M_exp_1'])
+# blck_cond = []
+# for i in aaaBBB['variable']:
+#     if i == 'RT_M_bl':
+#         blck_cond.append(0)
+#     elif i == 'RT_M_exp_0':
+#         blck_cond.append(1)
+#     elif i == 'RT_M_exp_1':
+#         blck_cond.append(2)
+# aaaBBB['block_cond'] = blck_cond
+# BS_cond = []
+# for i,j in zip(aaaBBB['trial_type'],aaaBBB['block_cond']):
+#     BS_cond.append(str(i)+str(j))
+# aaaBBB['total_cond'] = BS_cond      
+
+# res = pg.mixed_anova(data=aaaBBB, dv='value', subject ='id', between='group', within ='total_cond', effsize='np2')
+# res_ttest = pg.pairwise_ttests(data=aaaBBB, dv='value', subject ='id', between='group', within ='total_cond')
 
