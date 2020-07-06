@@ -162,6 +162,7 @@ AAA_dat = pd.concat([PERF_bl_DF.sort_values('id'),
                      PERF_exp_DF_1.sort_values('id').drop(['id','trial_type'], axis = 1)]
                     ,axis=1)
 
+
 ###Merge all DF to long format 
 BBB_dat = pd.concat([PERF_bl_DF.sort_values('id'),
                      PERF_exp_DF_0.sort_values('id'),
@@ -175,6 +176,9 @@ for i in AAA_dat['id'].unique():
     group_aaa = group_aaa +list(groups['group'].loc[groups['id'] == i])*4
 AAA_dat['group'] = group_aaa
 AAA_dat.to_csv(r'C:\Users\de_hauk\Desktop\data_JASP_2.csv', sep=',' )
+
+anova_2f_bs = AAA_dat.copy()[['id','RT_M_bl','trial_type','group']]
+anova_2f_bs.to_csv(r'C:\Users\de_hauk\Desktop\anova_2f_bs.csv', sep=',' )
 
 aaaBBB = pd.melt(AAA_dat, id_vars=['group','id','trial_type'], value_vars=['RT_M_bl','RT_M_exp_0','RT_M_exp_1'])
 blck_cond = []
