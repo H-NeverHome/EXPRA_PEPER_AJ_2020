@@ -10,7 +10,8 @@ import pandas as pd
 import pingouin as pg
 import numpy as np
 import os
-
+import matplotlib.pyplot as plt
+import seaborn as sns
 
 ########## Import Data
 data_raw_exp = []
@@ -173,19 +174,21 @@ AAA_dat = pd.concat([PERF_bl_DF.sort_values('id'),
                      PERF_exp_DF_1.sort_values('id').drop(['id','trial_type'], axis = 1)]
                     ,axis=1)
 
-###Merge all DF to long format 
-BBB_dat = pd.concat([PERF_bl_DF.sort_values('id'),
-                     PERF_exp_DF_0.sort_values('id'),
-                     PERF_exp_DF_1.sort_values('id')]
-                    ,axis=0)
+# ###Merge all DF to long format 
+# BBB_dat = pd.concat([PERF_bl_DF.sort_values('id'),
+#                      PERF_exp_DF_0.sort_values('id'),
+#                      PERF_exp_DF_1.sort_values('id')]
+#                     ,axis=0)
 
-
+### Get group var
 
 group_aaa = []
 for i in AAA_dat['id'].unique():
     group_aaa = group_aaa +list(groups['group'].loc[groups['id'] == i])*4
 AAA_dat['group'] = group_aaa
 AAA_dat.to_csv(r'C:\Users\de_hauk\PowerFolders\EXPRA_Peper_SS_2020\Daten\data_JASP_2.csv', sep=',' )
+
+
 
 #### get BSI
 BSI_dat_raw = AAA_dat.copy()
@@ -200,23 +203,45 @@ for vpn in BSI_dat_raw['id'].unique():
     BSI_RT_1 = comp_BSI(BSI_curr_df['RT_M_exp_1'].loc['AY'],
                         BSI_curr_df['RT_M_exp_1'].loc['BX'])
     BSI_dat[str(int(vpn))] = [vpn,BSI_group,BSI_RT_BL,BSI_RT_0,BSI_RT_1]
-    
-BSI_dat= BSI_dat.copy().T
-BSI_dat.to_csv(r'C:\Users\de_hauk\PowerFolders\EXPRA_Peper_SS_2020\Daten\data_JASP_2_BSI.csv', sep=',' )
 
-aov_2F = pg.anova(dv='BSI_RT_BL', between='group', data=BSI_dat,
-               detailed=True)
+### get Fragebogen Dat
+BSI_dat= BSI_dat.copy().T
+BSI_dat['id'] = BSI_dat['id'].copy().astype(int)
+BSI_dat = BSI_dat.copy().set_index('id')
+Q_data_raw = pd.read_csv(r'C:\Users\de_hauk\PowerFolders\EXPRA_Peper_SS_2020\Daten\fragebogen\fb_exp.txt', sep='\t').sort_values('ID').set_index('ID').drop(labels='group', axis =1 )
+
+#BSI_dat_fin = pd.concat([BSI_dat, Q_data_raw], axis=0)
+BSI_dat_fin = pd.merge(BSI_dat, Q_data_raw, left_index=True, right_index=True)
+#### Save Data
+#BSI
+
+BSI_dat_fin.to_csv(r'C:\Users\de_hauk\PowerFolders\EXPRA_Peper_SS_2020\Daten\data_JASP_2_BSI.csv', sep=',' )
+
+# trial_type/ 2-Faktor
 
 anova_2f_bs = AAA_dat.copy()[['id','RT_M_bl','trial_type','group']]
 
 anova_2f_bs.to_csv(r'C:\Users\de_hauk\PowerFolders\EXPRA_Peper_SS_2020\Daten\2f_anova\anova_2f_bs.csv', sep=',' )
 
-# import seaborn as sns
+aov_2F = pg.anova(dv='BSI_RT_BL', between='group', data=BSI_dat,
+               detailed=True)
 
-# sns_plot = sns.catplot(x="group", y="BSI_RT_BL", data=BSI_dat)
+#### Plots
+sns_plot_BSI = sns.catplot(x="group", y="BSI_RT_BL", data=BSI_dat, kind = 'box')
+sns_plot_BSI.savefig(r"C:\Users\de_hauk\PowerFolders\EXPRA_Peper_SS_2020\Daten\2f_anova\1F_dat_BSI.png")
+plt.clf()
+sns_plot_tt = sns.catplot(x='trial_type', y="RT_M_bl", data=AAA_dat, hue = "group", kind = 'box')
+sns_plot_tt.savefig(r"C:\Users\de_hauk\PowerFolders\EXPRA_Peper_SS_2020\Daten\2f_anova\2F_dat_tt.png")
 
-# aov_2F = pg.anova(dv='data', between=['group','gender'], data=DATA_anova,
-#                detailed=True)
+
+
+
+
+anova_2F1 = pg.anova(dv='RT_M_bl', between=['group','trial_type'], data=AAA_dat,detailed=True)
+anova_2F1_ss_tot = ((AAA_dat['RT_M_bl']-AAA_dat['RT_M_bl'].mean())**2).sum()
+anova_2F1_np_2_group = 2365/(2365 + 308246)
+anova_2F1_omega_tt = (182365-(3*4281))/(anova_2F1_ss_tot+4281)
+anova_2F1_omega_err = anova_2F1_ss_tot -(2365 +182365+13121)
 
 # DATA_anova.to_csv(r'DATA_2F_anova.csv', sep= ',')
 
